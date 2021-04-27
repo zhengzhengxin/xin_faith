@@ -4,7 +4,7 @@ num_layer=1
 input_dim=2048
 lstm_dropout=0.8
 bidirectional=True
-epoch = 100
+epoch = 200
 optim = dict(name='Adam',setting=dict(lr=1e-2, weight_decay=5e-4))
 batch_size=16
 stepper = dict(name='MultiStepLR',setting=dict(milestones=[30,50,70],gamma=0.5))
