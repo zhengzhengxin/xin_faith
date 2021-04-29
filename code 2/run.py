@@ -6,8 +6,8 @@ from mmcv import Config
 import argparse 
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from pytorch_metric_learning.losses import losses
-from pytorch_metric_learning.distances import ConsineSimilarity
+from pytorch_metric_learning import losses
+from pytorch_metric_learning.distances import CosineSimilarity
 def parse_args():
     parser = argparse.ArgumentParser(description='Runner')
     parser.add_argument('config', help='config file path')
@@ -32,7 +32,7 @@ def main():
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
 
     criterion1 = nn.CrossEntropyLoss()
-    distance = ConsineSimilarity()
+    distance = CosineSimilarity()
     criterion2 = losses.TripletMarginLoss(distance = distance)
 
     total_loss=list()
@@ -47,7 +47,7 @@ def main():
         total_ap.append(ap)
         total_epoch.append(epoch)
         total_acc.append(acc)
-        print('Test Epoch: {} \tloss: {:.6f}\tap: {:.6f}'.format(epoch, loss,ap))
+        print('Test Epoch: {} \tloss: {:.6f}\tap: {:.6f}\t acc: {:.6f}'.format(epoch, loss,ap,acc))
         if ap>max_ap:
             best_model=model
     save_path=cfg.store+'.pth'

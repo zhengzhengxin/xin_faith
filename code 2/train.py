@@ -22,9 +22,9 @@ def train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,crit
         target=target.view(-1).cuda()
         optimizer.zero_grad()
         output=model(feature)
-        embedding = mdoel.cosresult.cpu()
+        embedding = model.cosresult.cpu()
         #output=output.view(-1,2)
-        loss=criterion1(output,target)+criterion2(embeddings,target)
+        loss=criterion1(output,target)+criterion2(embedding,target)
         loss.backward()
         optimizer.step()
         train_loss+=loss.item()
@@ -38,19 +38,25 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
     model.eval()
     test_loss=0
     prob_raw, gts_raw = [], []
+    correct1, correct0 = 0, 0
+    gt1, gt0, all_gt = 0, 0, 0
     with torch.no_grad():
         for idx,(feature,target) in enumerate(test_loader):
             feature=feature.cuda()
             target=target.view(-1).cuda()
             output=model(feature)
-            embedding = mdoel.cosresult.cpu()
-            loss=criterion(output,target)+criterion2(embeddings,target)
+            embedding = model.cosresult.cpu()
+            loss=criterion1(output,target)+criterion2(embedding,target)
             test_loss+=loss.item()
             #count ap
             output = F.softmax(output, dim=1)
             prob = output[:, 1]
+            gt = target.cpu().detach().numpy()
+            prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+            idx1 = np.where(gt == 1)[0]
+            correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
             gts_raw.append(target.cpu().numpy())
             prob_raw.append(prob.cpu().numpy())
         ap = get_ap(gts_raw, prob_raw)
-        return test_loss,ap
+        return test_loss,ap,correct1
 

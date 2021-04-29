@@ -20,10 +20,9 @@ class Feature_class(nn.Module):
         self.fc1=nn.Linear(self.lstm_hidden*2,100)
         self.fc2=nn.Linear(100,2)
     def forward(self,x):
-        x = x.view(-1, self.seq_len)
-        x=self.lstm.flatten_parameters()
+        x = x.view(-1, self.seq_len,x.shape[-1])
         out, (_, _) = self.lstm(x)
-        out = F.relu(self.fc1(out))
+        out = F.relu(self.fc1(out[:,-1,:]))
         self.cosresult = out
         out = self.fc2(out)
         return out

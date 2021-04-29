@@ -7,8 +7,8 @@ from mmcv import Config
 import argparse 
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from pytorch_metric_learning.losses import losses
-from pytorch_metric_learning.distances import ConsineSimilarity
+from pytorch_metric_learningimport losses
+from pytorch_metric_learning.distances import CosineSimilarity
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Runner')
@@ -36,8 +36,8 @@ def main():
 
     criterion_1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
     #加入对数损失
-    distance = ConsineSimilarity()
-    criterion_2 = losses.TripletMarginLoss()
+    distance = CosineSimilarity()
+    criterion_2 = losses.TripletMarginLoss(distance = distance)
     
     
 
