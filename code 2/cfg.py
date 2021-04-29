@@ -2,16 +2,16 @@ seq_len=16
 lstm_hidden=1024
 num_layer=1
 input_dim=2048
-lstm_dropout=0.8
+lstm_dropout=0.5
 bidirectional=True
-epoch = 200
-optim = dict(name='Adam',setting=dict(lr=1e-2, weight_decay=5e-4))
-batch_size=16
-stepper = dict(name='MultiStepLR',setting=dict(milestones=[30,50,70],gamma=0.5))
+epoch = 100
+optim = dict(name='Adam',setting=dict(lr=1e-3, weight_decay=5e-4))
+batch_size=512
+stepper = dict(name='MultiStepLR',setting=dict(milestones=[],gamma=0.1))
 
-loss = dict(weight=[0.5, 5])
+loss = dict(weight=[1.0, 1.0])
 
-store='./place_result_seq16_hidd1024_drop0.8'
+store='./tea_transformer_bs512_lr3_cos'
 
-feature_train_file='/home/zhenzhengxin/feature_single_class/label/place_feature_train.txt'
-feature_test_file='/home/zhenzhengxin/feature_single_class/label/place_feature_test.txt'
+feature_train_file='/home/zhenzhengxin/feature_single_class/label/tea_feature_train.txt'
+feature_test_file='/home/zhenzhengxin/feature_single_class/label/tea_feature_test.txt'

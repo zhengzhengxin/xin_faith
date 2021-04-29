@@ -6,7 +6,8 @@ from mmcv import Config
 import argparse 
 import torch.optim as optim
 import matplotlib.pyplot as plt
-
+from pytorch_metric_learning.losses import losses
+from pytorch_metric_learning.distances import ConsineSimilarity
 def parse_args():
     parser = argparse.ArgumentParser(description='Runner')
     parser.add_argument('config', help='config file path')
@@ -30,7 +31,9 @@ def main():
     #在指定的epoch对其进行衰减
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion1 = nn.CrossEntropyLoss()
+    distance = ConsineSimilarity()
+    criterion2 = losses.TripletMarginLoss(distance = distance)
 
     total_loss=list()
     total_epoch=list()
@@ -38,8 +41,8 @@ def main():
     total_acc=list()
     max_ap=0
     for epoch in range(0,cfg.epoch):
-        train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion)
-        loss,ap,acc=test(cfg, model, test_loader, criterion)
+        train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2)
+        loss,ap,acc=test(cfg, model, test_loader, criterion1, criterion2)
         total_loss.append(loss)
         total_ap.append(ap)
         total_epoch.append(epoch)
