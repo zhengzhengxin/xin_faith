@@ -23,9 +23,9 @@ def train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,crit
         optimizer.zero_grad()
         output = model(feature)
         output = output.squeeze(dim=-1)
-        embedding = model.cosresult.cpu()
+        embedding = model.cosresult
         #output=output.view(-1,2)
-        loss=criterion1(output,target.float())+criterion2(embedding,target)
+        loss=8*criterion1(output,target.float())+2*criterion2(embedding,target.float())
         #loss=criterion1(output,target.float())
         loss.backward()
         optimizer.step()
@@ -48,8 +48,8 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
             target = target.view(-1).cuda()
             output = model(feature)
             output = output.squeeze(dim=-1)
-            embedding = model.cosresult.cpu()
-            loss = criterion1(output,target.float())
+            embedding = model.cosresult
+            loss = 8*criterion1(output,target.float())+2*criterion2(embedding,target.float())
             test_loss += loss.item()
             # count ap
             # output = F.softmax(output, dim=1)
@@ -64,3 +64,23 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
         ap = get_ap(gts_raw, prob_raw)
         return test_loss,ap,correct1
 
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=1, gamma=2, logits=False, reduce=True):
+        super(FocalLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.logits = logits
+        self.reduce = reduce
+
+    def forward(self, inputs, targets):
+        if self.logits:
+            BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduce=False)
+        else:
+            BCE_loss = F.binary_cross_entropy(inputs, targets, reduce=False)
+        pt = torch.exp(-BCE_loss)
+        F_loss = self.alpha * (1-pt)**self.gamma * BCE_loss
+
+        if self.reduce:
+            return torch.mean(F_loss)
+        else:
+            return F_loss

@@ -35,7 +35,9 @@ def main():
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
 
     #criterion1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
-    criterion1 = nn.BCEWithLogitsLoss()
+    #criterion1 = nn.BCEWithLogitsLoss()
+    criterion1 = FocalLoss(logits=True)
+    
     #加入对数损失
     distance = CosineSimilarity()
     criterion2 = losses.TripletMarginLoss(distance = distance)
