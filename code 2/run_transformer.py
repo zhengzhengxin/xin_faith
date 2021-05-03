@@ -7,7 +7,7 @@ from mmcv import Config
 import argparse 
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from pytorch_metric_learningimport losses
+from pytorch_metric_learning import losses
 from pytorch_metric_learning.distances import CosineSimilarity
 
 def parse_args():
@@ -28,13 +28,14 @@ def main():
 
     train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True)
     test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False)
-    model=ViT(cfg=cfg,feature_seq=16,num_classes=2,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
+    model=ViT(cfg=cfg,feature_seq=16,num_classes=1,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
     #model=ViT_cat(cfg=cfg,feature_seq=16,num_classes=2,dim=4096,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
     optimizer = optim.__dict__[cfg.optim.name](model.parameters(), **cfg.optim.setting)
     #在指定的epoch对其进行衰减
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
 
-    criterion1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
+    #criterion1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
+    criterion1 = nn.BCEWithLogitsLoss()
     #加入对数损失
     distance = CosineSimilarity()
     criterion2 = losses.TripletMarginLoss(distance = distance)
