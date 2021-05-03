@@ -34,10 +34,10 @@ def main():
     #在指定的epoch对其进行衰减
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
 
-    criterion_1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
+    criterion1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
     #加入对数损失
     distance = CosineSimilarity()
-    criterion_2 = losses.TripletMarginLoss(distance = distance)
+    criterion2 = losses.TripletMarginLoss(distance = distance)
     
     
 
@@ -47,8 +47,8 @@ def main():
     total_acc=list()
     max_ap=0
     for epoch in range(0,cfg.epoch):
-        train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion_2)
-        loss,ap,acc=test(cfg, model, test_loader, criterion)
+        train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2)
+        loss,ap,acc=test(cfg, model, test_loader, criterion1,criterion2)
         total_loss.append(loss)
         total_ap.append(ap)
         total_epoch.append(epoch)

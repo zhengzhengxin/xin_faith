@@ -18,13 +18,15 @@ def train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,crit
     train_loss=0
     model.train()
     for idx,(feature,target) in enumerate(train_loader):
-        feature=feature.cuda()
-        target=target.view(-1).cuda()
+        feature = feature.cuda()
+        target = target.view(-1).cuda()
         optimizer.zero_grad()
-        output=model(feature)
+        output = model(feature)
+        output = output.squeeze(dim=-1)
         embedding = model.cosresult.cpu()
         #output=output.view(-1,2)
-        loss=criterion1(output,target)+criterion2(embedding,target)
+        loss=criterion1(output,target.float())+criterion2(embedding,target)
+        #loss=criterion1(output,target.float())
         loss.backward()
         optimizer.step()
         train_loss+=loss.item()
@@ -42,15 +44,17 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
     gt1, gt0, all_gt = 0, 0, 0
     with torch.no_grad():
         for idx,(feature,target) in enumerate(test_loader):
-            feature=feature.cuda()
-            target=target.view(-1).cuda()
-            output=model(feature)
+            feature = feature.cuda()
+            target = target.view(-1).cuda()
+            output = model(feature)
+            output = output.squeeze(dim=-1)
             embedding = model.cosresult.cpu()
-            loss=criterion1(output,target)+criterion2(embedding,target)
-            test_loss+=loss.item()
-            #count ap
-            output = F.softmax(output, dim=1)
-            prob = output[:, 1]
+            loss = criterion1(output,target.float())
+            test_loss += loss.item()
+            # count ap
+            # output = F.softmax(output, dim=1)
+            prob = torch.sigmoid(output)
+            # prob = output[:, 1]
             gt = target.cpu().detach().numpy()
             prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
             idx1 = np.where(gt == 1)[0]
