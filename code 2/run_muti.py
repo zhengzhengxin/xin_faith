@@ -1,5 +1,5 @@
-from data_loader import PlaceDateset
-from vit_place import ViT
+from data_loader import MutiDateset
+from vit_place import Dense_fenlei
 from vit_place_cat import ViT_cat
 from torch.utils.data import DataLoader
 from train import *
@@ -21,20 +21,19 @@ cfg = Config.fromfile(args.config)
 
 
 def main():
-    feature_train_file=cfg.feature_train_file
-    feature_test_file=cfg.feature_test_file
-    train_dataset=PlaceDateset(feature_train_file)
-    test_dataset= PlaceDateset(feature_test_file)
+    muti_train_file = cfg.muti_train_file
+    muti_test_file = cfg.muti_test_file
+    train_dataset = MutiDateset(muti_train_file)
+    test_dataset = MutiDateset(muti_test_file)
 
     train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True)
     test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False)
-    model=ViT(cfg=cfg,feature_seq=16,num_classes=1,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
-    #model=ViT_cat(cfg=cfg,feature_seq=16,num_classes=2,dim=4096,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
+    model = Dense_fenlei(cfg=cfg,feature_seq=16,num_classes=2,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
     optimizer = optim.__dict__[cfg.optim.name](model.parameters(), **cfg.optim.setting)
     #在指定的epoch对其进行衰减
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
 
-    #criterion1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
+    criterion3 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
     #criterion1 = nn.BCEWithLogitsLoss()
     criterion1 = FocalLoss(logits=True)
     
@@ -52,8 +51,8 @@ def main():
 
 
     for epoch in range(0,cfg.epoch):
-        train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2)
-        loss,ap,acc=test(cfg, model, test_loader, criterion1,criterion2)
+        train_mult(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2,criterion3)
+        loss,ap,acc=test_mult(cfg, model, test_loader, criterion1,criterion2,criterion3)
         total_loss.append(loss)
         total_ap.append(ap)
         total_epoch.append(epoch)
