@@ -29,10 +29,11 @@ def main():
     train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True)
     test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False)
     model = Dense_fenlei(cfg=cfg,feature_seq=16,num_classes=2,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
-    optimizer = optim.__dict__[cfg.optim.name](model.parameters(), **cfg.optim.setting)
-    #在指定的epoch对其进行衰减
-    scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer, **cfg.stepper.setting)
+    optimizer1 = optim.__dict__[cfg.optim.name](model.parameters(), **cfg.optim.setting)
+    optimizer2 = optim.__dict__[cfg.optim.name](filter(lambda p: p.requires_grad, model.parameters()), **cfg.optim.setting)
 
+    #在指定的epoch对其进行衰减
+    scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer1, **cfg.stepper.setting)
     criterion3 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
     #criterion1 = nn.BCEWithLogitsLoss()
     criterion1 = FocalLoss(logits=True)
@@ -51,7 +52,7 @@ def main():
 
 
     for epoch in range(0,cfg.epoch):
-        train_mult(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2,criterion3)
+        train_mult(cfg, model, train_loader, optimizer1,optimizer2, scheduler, epoch, criterion1,criterion2,criterion3)
         loss,ap,acc=test_mult(cfg, model, test_loader, criterion1,criterion2,criterion3)
         total_loss.append(loss)
         total_ap.append(ap)

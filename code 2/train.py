@@ -85,24 +85,31 @@ class FocalLoss(nn.Module):
         else:
             return F_loss
 
-def train_mult(cfg, model,train_loader, optimizer, scheduler, epoch, criterion1,criterion2,criterion3):
+def train_mult(cfg, model,train_loader, optimizer1,optimizer2, scheduler, epoch, criterion1,criterion2,criterion3):
     train_loss=0
     model.train()
     for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
         feat_place = feat_place.cuda()
         feat_tea = feat_tea.cuda()
         target = target.view(-1).cuda()
-        optimizer.zero_grad()
+        optimizer1.zero_grad()
+        optimizer2.zero_grad()
         out_place, out_tea, emb_place, emb_tea, out = model(feat_place,feat_tea)
         out_place = out_place.squeeze(dim=-1)
         out_tea = out_tea.squeeze(dim=-1)
         out=out.view(-1,2)
-        loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-        loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
-        loss=criterion3(out,target) + loss_place + loss_tea
-        loss.backward()
-        optimizer.step()
-        train_loss+=loss.item()
+        if epoch%2 == 0:
+            loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
+            loss = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
+            loss_place.requires_grad_().backward()
+            loss.requires_grad_().backward()
+            optimizer1.step()
+            train_loss+=loss.item()
+        else:
+            loss=criterion3(out,target)
+            loss.backward()
+            optimizer2.step()
+            train_loss+=loss.item()
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
                 epoch, int(idx * len(feat_place)), len(train_loader.dataset), loss.item()))
     #学习率的一个优化，不一定需要使用

@@ -148,6 +148,8 @@ class Dense_fenlei(nn.Module):
         super().__init__()
         self.vit_a = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout,False)
         self.vit_b = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout)
+        for p in self.parameters():
+            p.requires_grad=False
         self.fc1 = nn.Linear(dim*2, dim)
         self.fc2 = nn.Linear(dim, dim)
         self.fc3 = nn.Linear(dim, num_classes)
