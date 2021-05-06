@@ -153,7 +153,7 @@ class Dense_fenlei(nn.Module):
         self.fc1 = nn.Linear(dim*2, dim)
         self.fc2 = nn.Linear(dim, dim)
         self.fc3 = nn.Linear(dim, num_classes)
-        self.dropout = nn.Dropout(0.8)
+        self.dropout = nn.Dropout(0.5)
     def forward(self,input_a,input_b):
         x_a_out,x_a = self.vit_a(input_a)
         self.place = x_a_out

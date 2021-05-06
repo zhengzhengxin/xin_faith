@@ -100,25 +100,25 @@ def train_mult(cfg, model,train_loader, optimizer1,optimizer2, scheduler, epoch,
         out=out.view(-1,2)
         if epoch%2 == 0:
             loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-            loss = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
-            loss_place.requires_grad_().backward()
-            loss.requires_grad_().backward()
+            loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
+            loss = loss_place + loss_tea
+            loss.requires_grad_(True).backward()
             optimizer1.step()
-            train_loss+=loss.item()
+            #train_loss+=loss.item()
         else:
             loss=criterion3(out,target)
             loss.backward()
             optimizer2.step()
             train_loss+=loss.item()
-        print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
-                epoch, int(idx * len(feat_place)), len(train_loader.dataset), loss.item()))
+            print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+                    epoch, int(idx * len(feat_place)), len(train_loader.dataset), loss.item()))
     #学习率的一个优化，不一定需要使用
     scheduler.step()
 
 def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='test'):
     model.eval()
-    test_loss=0
-    prob_raw, gts_raw = [], []
+    test_loss, test_place_loss, test_tea_loss=0, 0, 0
+    prob_raw, gts_raw, prob_tea_raw, prob_place_raw = [], [], [], []
     correct1, correct0 = 0, 0
     gt1, gt0, all_gt = 0, 0, 0
     with torch.no_grad():
@@ -127,17 +127,19 @@ def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='t
             feat_tea = feat_tea.cuda()
             target = target.view(-1).cuda()
             out_place, out_tea, emb_place, emb_tea, out = model(feat_place,feat_tea)
-            # out_place = out_place.squeeze(dim=-1)
-            # out_tea = out_tea.squeeze(dim=-1)
+            out_place = out_place.squeeze(dim=-1)
+            out_tea = out_tea.squeeze(dim=-1)
             out=out.view(-1,2)
-            # loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-            # loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
-            # loss=criterion1(out,target.float()) + loss_place + loss_tea
+            loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
+            loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
             loss = criterion3(out,target)
             test_loss += loss.item()
+            test_place_loss += loss_place.item()
+            test_tea_loss += loss_tea.item()
             # count ap
             out = F.softmax(out, dim=1)
-            # prob = torch.sigmoid(output)
+            prob_place = torch.sigmoid(out_tea)
+            prob_tea = torch.sigmoid(out_place)
             prob = out[:, 1]
             gt = target.cpu().detach().numpy()
             prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -145,5 +147,9 @@ def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='t
             correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
             gts_raw.append(target.cpu().numpy())
             prob_raw.append(prob.cpu().numpy())
+            prob_tea_raw.append(prob_tea.cpu().numpy())
+            prob_place_raw.append(prob_place.cpu().numpy())
         ap = get_ap(gts_raw, prob_raw)
-        return test_loss,ap,correct1
+        ap_tea = get_ap(gts_raw, prob_tea_raw)
+        ap_place = get_ap(gts_raw, prob_place_raw)
+        return test_loss,test_tea_loss,test_place_loss,ap,correct1,ap_tea,ap_place
