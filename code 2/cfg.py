@@ -4,7 +4,7 @@ num_layer=1
 input_dim=2048
 lstm_dropout=0.5
 bidirectional=True
-epoch = 100
+epoch = 10
 optim1 = dict(name='Adam',setting=dict(lr=1e-3, weight_decay=5e-3))
 optim2 = dict(name='Adam',setting=dict(lr=1e-4, weight_decay=5e-3))
 batch_size=256

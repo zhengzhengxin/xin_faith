@@ -88,6 +88,18 @@ class FocalLoss(nn.Module):
 def train_mult(cfg, model,train_loader, optimizer1,optimizer2, scheduler, epoch, criterion1,criterion2,criterion3):
     train_loss=0
     model.train()
+    if epoch < 5:
+        for name, value in model.named_parameters():
+            if "vit" in name:
+                value.requires_grad = False
+            if "vit" not in name:
+                value.requires_grad = True
+    if epoch >= 5:
+        for name, value in model.named_parameters():
+            if "vit" in name:
+                value.requires_grad = True
+            if "vit" not in name:
+                value.requires_grad = False
     for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
         feat_place = feat_place.cuda()
         feat_tea = feat_tea.cuda()
@@ -98,14 +110,14 @@ def train_mult(cfg, model,train_loader, optimizer1,optimizer2, scheduler, epoch,
         out_place = out_place.squeeze(dim=-1)
         out_tea = out_tea.squeeze(dim=-1)
         out=out.view(-1,2)
-        if epoch%2 == 0:
+        if epoch >= 5: 
             loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
             loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
             loss = loss_place + loss_tea
-            loss.requires_grad_(True).backward()
+            loss.backward()
             optimizer1.step()
-            #train_loss+=loss.item()
-        else:
+            train_loss+=loss.item()
+        if epoch < 5:
             loss=criterion3(out,target)
             loss.backward()
             optimizer2.step()

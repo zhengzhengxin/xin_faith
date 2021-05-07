@@ -29,7 +29,7 @@ def main():
     train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True)
     test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False)
     model = Dense_fenlei(cfg=cfg,feature_seq=16,num_classes=2,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
-    optimizer1 = optim.__dict__[cfg.optim1.name](model.parameters(), **cfg.optim1.setting)
+    optimizer1 = optim.__dict__[cfg.optim1.name](filter(lambda p: p.requires_grad, model.parameters()), **cfg.optim1.setting)
     optimizer2 = optim.__dict__[cfg.optim2.name](filter(lambda p: p.requires_grad, model.parameters()), **cfg.optim2.setting)
 
     #在指定的epoch对其进行衰减
@@ -49,8 +49,6 @@ def main():
     total_ap, total_tea_ap, total_place_ap=list(), list(), list()
     total_acc=list()
     max_ap=0
-    
-
 
     for epoch in range(0,cfg.epoch):
         train_mult(cfg, model, train_loader, optimizer1,optimizer2, scheduler1,epoch, criterion1,criterion2,criterion3)
@@ -68,19 +66,19 @@ def main():
             best_model=model
     save_path=cfg.store+'.pth'
     torch.save(best_model.state_dict(), save_path)
-    
-    plt.figure()
-    plt.plot(total_epoch,total_loss,'b-',label=u'loss')
-    plt.plot(total_epoch,total_tea_loss,'r-',label=u'tea_loss')
-    plt.plot(total_epoch,total_place_loss,'y-',label=u'place_loss')
+    pdb.set_trace()
+    plt.figure(figsize=(30,20))
+    plt.plot(total_epoch,total_loss,'b^',label=u'loss')
+    plt.plot(total_epoch,total_tea_loss,'r^',label=u'tea_loss')
+    plt.plot(total_epoch,total_place_loss,'y^',label=u'place_loss')
     plt.legend()
     loss_path=cfg.store+"_loss.png"
     plt.savefig(loss_path)
     
-    plt.figure()
-    plt.plot(total_epoch,total_ap,'b-',label=u'AP')
-    plt.plot(total_epoch,total_tea_ap,'r-',label=u'tea_AP')
-    plt.plot(total_epoch,total_place_ap,'y-',label=u'place_AP')
+    plt.figure(figsize=(30,20))
+    plt.plot(total_epoch,total_ap,'b^',label=u'AP')
+    plt.plot(total_epoch,total_tea_ap,'r^',label=u'tea_AP')
+    plt.plot(total_epoch,total_place_ap,'y^',label=u'place_AP')
     plt.legend()
     AP_path=cfg.store+"_AP.png"
     plt.savefig(AP_path)
