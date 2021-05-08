@@ -94,7 +94,7 @@ class Transformer(nn.Module):
         return x
 
 class ViT(nn.Module):
-    def __init__(self, cfg,feature_seq,num_classes, dim, depth, heads, mlp_dim, dropout = 0.,batch_normalization=True,dim_head = 64, emb_dropout = 0.,pool = 'cls'):
+    def __init__(self, *, cfg,feature_seq,num_classes, dim, depth, heads, mlp_dim, pool = 'cls', dim_head = 64, dropout = 0., emb_dropout = 0.,batch_normalization=True):
         super().__init__()
         #assert image_size % patch_size == 0, 'Image dimensions must be divisible by the patch size.'
         #num_patches = (image_size // patch_size) ** 2
@@ -144,27 +144,27 @@ class ViT(nn.Module):
         return self.mlp_head(x),self.cosresult
 
 class Dense_fenlei(nn.Module):
-    def __init__(self,cfg,feature_seq,num_classes, dim, depth, heads, mlp_dim, dim_head = 64, dropout = 0., emb_dropout = 0.):
+    def __init__(self,num_classes, dim, dropout = 0.):
         super().__init__()
-        self.vit_a = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout,False)
-        self.vit_b = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout)
+        # self.vit_a = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout,False)
+        # self.vit_b = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout)
         self.fc1 = nn.Linear(dim*2, dim)
         self.fc2 = nn.Linear(dim, dim)
         self.fc3 = nn.Linear(dim, num_classes)
-        self.dropout = nn.Dropout(0.8)
+        self.dropout = nn.Dropout(dropout)
     def forward(self,input_a,input_b):
-        x_a_out,x_a = self.vit_a(input_a)
-        self.place = x_a_out
-        self.place_feat = x_a
-        x_b_out,x_b = self.vit_b(input_b)
-        self.tea = x_b_out
-        self.tea_feat = x_b
-        x = torch.cat((x_a,x_b),dim = 1)
+        # x_a_out,x_a = self.vit_a(input_a)
+        # self.place = x_a_out
+        # self.place_feat = x_a
+        # x_b_out,x_b = self.vit_b(input_b)
+        # self.tea = x_b_out
+        # self.tea_feat = x_b
+        x = torch.cat((input_a,input_b),dim = 1)
         x = F.relu(self.fc1(x))
         x = self.dropout(x)
         x = F.relu(self.fc2(x))
         x = self.dropout(x)
-        return self.place ,self.tea ,self.place_feat ,self.tea_feat ,self.fc3(x)
+        return self.fc3(x)
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2, logits=False, reduce=True):

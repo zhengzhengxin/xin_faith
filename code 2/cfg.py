@@ -5,13 +5,15 @@ input_dim=2048
 lstm_dropout=0.5
 bidirectional=True
 epoch = 100
-optim = dict(name='Adam',setting=dict(lr=1e-2, weight_decay=5e-3))
-batch_size=256
+optim1 = dict(name='Adam',setting=dict(lr=1e-3, weight_decay=5e-3))
+optim2 = dict(name='Adam',setting=dict(lr=1e-3, weight_decay=5e-3))
+optim3 = dict(name='Adam',setting=dict(lr=1e-3, weight_decay=5e-3))
+batch_size=128
 stepper = dict(name='MultiStepLR',setting=dict(milestones=[],gamma=0.5))
 
-loss = dict(weight=[1.0, 1.0])
+loss = dict(weight=[0.5, 11.0])
 
-store='./muti_lr2_bs512'
+store='./muti_lr3_bs128_wei'
 
 feature_train_file='/home/zhenzhengxin/feature_single_class/label/place_feature_train.txt'
 feature_test_file='/home/zhenzhengxin/feature_single_class/label/place_feature_test.txt'
