@@ -1,4 +1,4 @@
-from data_loader import PlaceDateset
+from data_loader import PlaceDateset,actionDataset,collate_fn
 from model import Feature_class
 from torch.utils.data import DataLoader
 from train import *
@@ -8,6 +8,8 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 from pytorch_metric_learning import losses
 from pytorch_metric_learning.distances import CosineSimilarity
+from torch.nn.utils.rnn import pad_sequence,pack_padded_sequence, pad_packed_sequence
+import pdb
 def parse_args():
     parser = argparse.ArgumentParser(description='Runner')
     parser.add_argument('config', help='config file path')
@@ -71,5 +73,16 @@ def main():
     acc_path=cfg.store+"_acc.png"
     plt.savefig(acc_path)
 
+def main_action():
+    feature_train_file=cfg.action_train_file
+    feature_test_file=cfg.action_test_file
+    train_dataset=actionDataset(feature_train_file)
+    test_dataset= actionDataset(feature_test_file)
+
+    train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True,collate_fn=collate_fn)
+    test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False,collate_fn=collate_fn)
+
+    for data,length,label in train_loader:
+        data = pack_padded_sequence(data, length, batch_first=True)
 if __name__ == '__main__':
-    main()
+    main_action()
