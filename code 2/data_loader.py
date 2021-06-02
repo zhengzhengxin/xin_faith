@@ -72,7 +72,7 @@ class actionDataset(Dataset):
         label=self.feature_file_single[index][1]
         feat=np.load(feature_path)
         feats=torch.from_numpy(feat).float()
-        labels = np.array(int(label))
+        labels = int(label)
         length = np.array(len(feats))
         return feats,labels,length
 
@@ -80,5 +80,9 @@ def collate_fn(train_data):
     train_data.sort(key=lambda x: x[2], reverse=True)
     llds,labels,_ = zip(*train_data)
     data_length = [len(data) for data in llds]
+    data_length = torch.tensor(data_length)
+    
+    label = [data for data in labels]
+    label = torch.tensor(label)
     train_data = pad_sequence(llds, batch_first=True, padding_value=0)
-    return train_data, data_length,labels
+    return train_data, data_length,label

@@ -44,9 +44,10 @@ def main():
     max_ap=0
     for epoch in range(0,cfg.epoch):
         for idx,(feature,target) in enumerate(train_loader):
+            pdb.set_trace()
             feature = feature.cuda()
             target = target.view(-1).cuda()
-            pdb.set_trace()
+            
         train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2)
         loss,ap,acc=test(cfg, model, test_loader, criterion1, criterion2)
         total_loss.append(loss)
@@ -89,8 +90,9 @@ def main_action():
     model = Action_class(cfg).cuda()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
     loss_fn = nn.CrossEntropyLoss(reduction='sum', ignore_index=0)
-    for data,length,label in train_loader:
+    for idx,(data,length,label) in enumerate(train_loader):
         data = data.cuda()
+        pdb.set_trace()
         label = label.view(-1).cuda()
         optimizer.zero_grad()
         out = model(data,length)
@@ -99,4 +101,4 @@ def main_action():
         optimizer.step()
         
 if __name__ == '__main__':
-    main()
+    main_action()
