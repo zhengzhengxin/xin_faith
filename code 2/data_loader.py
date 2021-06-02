@@ -73,7 +73,7 @@ class actionDataset(Dataset):
         feat=np.load(feature_path)
         feats=torch.from_numpy(feat).float()
         labels = np.array(int(label))
-        length = len(feats)
+        length = np.array(len(feats))
         return feats,labels,length
 
 def collate_fn(train_data):

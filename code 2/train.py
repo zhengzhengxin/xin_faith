@@ -45,6 +45,7 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
     with torch.no_grad():
         for idx,(feature,target) in enumerate(test_loader):
             feature = feature.cuda()
+            pdb.set_trace()
             target = target.view(-1).cuda()
             output = model(feature)
             output = output.squeeze(dim=-1)

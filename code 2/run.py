@@ -1,5 +1,5 @@
 from data_loader import PlaceDateset,actionDataset,collate_fn
-from model import Feature_class
+from model import Feature_class,Action_class
 from torch.utils.data import DataLoader
 from train import *
 from mmcv import Config
@@ -43,6 +43,10 @@ def main():
     total_acc=list()
     max_ap=0
     for epoch in range(0,cfg.epoch):
+        for idx,(feature,target) in enumerate(train_loader):
+            feature = feature.cuda()
+            target = target.view(-1).cuda()
+            pdb.set_trace()
         train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2)
         loss,ap,acc=test(cfg, model, test_loader, criterion1, criterion2)
         total_loss.append(loss)
@@ -82,7 +86,17 @@ def main_action():
     train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True,collate_fn=collate_fn)
     test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False,collate_fn=collate_fn)
 
+    model = Action_class(cfg).cuda()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    loss_fn = nn.CrossEntropyLoss(reduction='sum', ignore_index=0)
     for data,length,label in train_loader:
-        data = pack_padded_sequence(data, length, batch_first=True)
+        data = data.cuda()
+        label = label.view(-1).cuda()
+        optimizer.zero_grad()
+        out = model(data,length)
+        loss = loss_fn(out,label)
+        loss.backward()
+        optimizer.step()
+        
 if __name__ == '__main__':
-    main_action()
+    main()
