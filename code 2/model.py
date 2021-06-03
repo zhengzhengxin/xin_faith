@@ -36,13 +36,13 @@ class Action_class(nn.Module):
         self.lstm=nn.LSTM(input_size=self.input_dim,
                           hidden_size=self.lstm_hidden,
                           batch_first=True)
-        self.hidden2tag = nn.Linear(4096, 2)
+        self.hidden2tag = nn.Linear(2048, 1)
                           
     def forward(self,x,x_len):
         x = pack_padded_sequence(x, x_len, batch_first=True)
-        out = self.lstm(x)
-        lstm_out, lens = pad_packed_sequence(out, batch_first=True)
-        tag_score = self.hidden2tag(lstm_out)
+        out,(_,_) = self.lstm(x)
+        #lstm_out, lens = pad_packed_sequence(out, batch_first=True)
+        tag_score = self.hidden2tag(lstm_out[:,-1,:])
         return tag_score
         
         

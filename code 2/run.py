@@ -89,13 +89,14 @@ def main_action():
 
     model = Action_class(cfg).cuda()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    loss_fn = nn.CrossEntropyLoss(reduction='sum', ignore_index=0)
+    loss_fn = FocalLoss(logits=True)
     for idx,(data,length,label) in enumerate(train_loader):
         data = data.cuda()
         pdb.set_trace()
         label = label.view(-1).cuda()
         optimizer.zero_grad()
         out = model(data,length)
+        pdb.set_trace()
         loss = loss_fn(out,label)
         loss.backward()
         optimizer.step()
