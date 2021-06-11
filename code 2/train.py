@@ -166,3 +166,121 @@ def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='t
         ap_tea = get_ap(gts_raw, prob_tea_raw)
         ap_place = get_ap(gts_raw, prob_place_raw)
         return test_loss,test_tea_loss,test_place_loss,ap,correct1,ap_tea,ap_place
+
+#阿里论文两特征融合
+def train_two(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state):
+    if state == 1:
+        train_loss=0
+        model1.train()
+        model_dense.train()
+        #注意数据输入的顺序
+        for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
+            feat_place = feat_place.cuda()
+            feat_tea = feat_tea.cuda()
+            target = target.view(-1).cuda()
+            optimizer1.zero_grad()
+            optimizer_dense.zero_grad()
+            output = model1(feat_tea)
+            output = model_dense(output)
+            output = output.squeeze(dim=-1)
+            #output=output.view(-1,2)
+            #loss = criterion2(embedding,target.float())
+            loss=criterion(output,target)
+            loss.backward()
+            optimizer1.step()
+            optimizer_dense.step()
+            train_loss+=loss.item()
+            print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+                    epoch, int(idx * len(feat_tea)), len(train_loader.dataset), loss.item()))
+    if state == 2:
+        train_loss=0
+        model1.train()
+        model_dense.train()
+        for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
+            feat_place = feat_place.cuda()
+            feat_tea = feat_tea.cuda()
+            target = target.view(-1).cuda()
+            optimizer1.zero_grad()
+            optimizer_dense.zero_grad()
+            output2 = model2(feat_tea)
+            output1 = model1(feat_place)
+            output = torch.cat((output1,output2),1)
+            output = model_dense(output)
+            output = output.squeeze(dim=-1)
+            loss=criterion(output,target)
+            loss.backward()
+            optimizer1.step()
+            optimizer_dense.step()
+            train_loss+=loss.item()
+            print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+                    epoch, int(idx * len(feat_tea)), len(train_loader.dataset), loss.item()))
+
+def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='test'):
+    model1.eval()
+    model2.eval()
+    model_dense.eval()
+    test_loss=0
+    prob_raw, gts_raw = [], []
+    correct1, correct0 = 0, 0
+    gt1, gt0, all_gt = 0, 0, 0
+    if state ==1:
+        with torch.no_grad():
+            for idx,(feat_place,feat_tea,target) in enumerate(test_loader):
+                feat_place = feat_place.cuda()
+                feat_tea = feat_tea.cuda()
+                target = target.view(-1).cuda()
+                output = model1(feat_tea)
+                output = model_dense(output)
+                output = output.squeeze(dim=-1)
+                #embedding = model.cosresult
+                #loss = criterion2(embedding,target.float())
+
+                #cross entpy 的target是分类，不用转成float
+                loss = criterion(output,target)
+                test_loss += loss.item()
+                #这个维度不知道对不对
+                output = F.softmax(output, dim=1)
+
+                # prob = torch.sigmoid(output)
+
+                # 应该是为1的概率吧
+                prob = output[:, 1]
+                gt = target.cpu().detach().numpy()
+                prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+                idx1 = np.where(gt == 1)[0]
+                correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
+                gts_raw.append(target.cpu().numpy())
+                prob_raw.append(prob.cpu().numpy())
+            ap = get_ap(gts_raw, prob_raw)
+            return test_loss,ap,correct1
+    if state ==2:
+        with torch.no_grad():
+            for idx,(feat_place,feat_tea,target) in enumerate(test_loader):
+                feat_place = feat_place.cuda()
+                feat_tea = feat_tea.cuda()
+                target = target.view(-1).cuda()
+                output1 = model1(feat_place)
+                output2 = model2(feat_tea)
+                output = torch.cat((output1,output2),1)
+                output = model_dense(output)
+                output = output.squeeze(dim=-1)
+                #embedding = model.cosresult
+                #loss = criterion2(embedding,target.float())
+
+                #cross entpy 的target是分类，不用转成float
+                loss = criterion(output,target)
+                test_loss += loss.item()
+                output = F.softmax(output, dim=1)
+
+                # prob = torch.sigmoid(output)
+
+                # 应该是为1的概率吧
+                prob = output[:, 1]
+                gt = target.cpu().detach().numpy()
+                prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+                idx1 = np.where(gt == 1)[0]
+                correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
+                gts_raw.append(target.cpu().numpy())
+                prob_raw.append(prob.cpu().numpy())
+            ap = get_ap(gts_raw, prob_raw)
+            return test_loss,ap,correct1
