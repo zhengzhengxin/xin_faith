@@ -43,6 +43,11 @@ def main():
     total_acc=list()
     max_ap=0
     for epoch in range(0,cfg.epoch):
+        for idx,(feature,target) in enumerate(train_loader):
+            pdb.set_trace()
+            feature = feature.cuda()
+            target = target.view(-1).cuda()
+            
         train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,criterion2)
         loss,ap,acc=test(cfg, model, test_loader, criterion1, criterion2)
         total_loss.append(loss)
@@ -119,6 +124,6 @@ def main_action():
     plt.legend()
     loss_path=cfg.store+"_loss.png"
     plt.savefig(loss_path)
-    
+
 if __name__ == '__main__':
     main_action()
