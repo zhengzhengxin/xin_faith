@@ -28,7 +28,7 @@ def main():
 
     train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True)
     test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False)
-    model=ViT(cfg=cfg,feature_seq=16,num_classes=1,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
+    model=ViT(cfg=cfg,feature_seq=16,num_classes=1,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1,batch_normalization=False).cuda()
     #model=ViT_cat(cfg=cfg,feature_seq=16,num_classes=2,dim=4096,depth=8,heads=8,mlp_dim=1024,dropout = 0.1,emb_dropout = 0.1).cuda()
     optimizer = optim.__dict__[cfg.optim.name](model.parameters(), **cfg.optim.setting)
     #在指定的epoch对其进行衰减
@@ -81,8 +81,6 @@ def main():
     plt.legend()
     acc_path=cfg.store+"_acc.png"
     plt.savefig(acc_path)
-
-
 
 if __name__ == '__main__':
     main()

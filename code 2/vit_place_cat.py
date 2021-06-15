@@ -24,7 +24,7 @@ class Feature_class(nn.Module):
     def forward(self,x):
         x = x.view(-1, self.seq_len,x.shape[-1])
         out, (_, _) = self.lstm(x)
-        out=out[:,-1,:]
+        #out = F.relu(out)
         return out
         
 class PreNorm(nn.Module):
@@ -93,8 +93,8 @@ class Transformer(nn.Module):
             x = ff(x) + x
         return x
 
-class ViT(nn.Module):
-    def __init__(self, *, cfg,feature_seq,num_classes, dim, depth, heads, mlp_dim, pool = 'cls', dim_head = 64, dropout = 0., emb_dropout = 0.,batch_normalization=True):
+class ViT_cat(nn.Module):
+    def __init__(self, *, cfg,feature_seq,num_classes, dim, depth, heads, mlp_dim, pool = 'cls', dim_head = 64, dropout = 0., emb_dropout = 0.):
         super().__init__()
         #assert image_size % patch_size == 0, 'Image dimensions must be divisible by the patch size.'
         #num_patches = (image_size // patch_size) ** 2
@@ -105,8 +105,8 @@ class ViT(nn.Module):
         #     Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_size, p2 = patch_size),
         #     nn.Linear(patch_dim, dim),
         # )
-        self.do_bn = batch_normalization
-        if self.do_bn: self.bn_input = nn.BatchNorm1d(feature_seq, momentum=0.5) 
+
+        
         self.pos_embedding = nn.Parameter(torch.randn(1, feature_seq + 1, dim))
         #编码token的函数
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
@@ -125,12 +125,11 @@ class ViT(nn.Module):
     def forward(self, x):
         #不需要embe
         #x = self.to_patch_embedding(img)
-        #x=self.lstm(x)
-        if self.do_bn:  x = self.bn_input(x)
+        out=self.lstm(x)
         b, n, _ = x.shape
-
-        #cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
-        cls_tokens = self.lstm(x).unsqueeze(1)
+        cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
+        #cls_tokens = self.lstm(x).unsqueeze(1)
+        x = torch.cat((out, x), dim=2)
         x = torch.cat((cls_tokens, x), dim=1)
         x += self.pos_embedding[:, :(n + 1)]
         x = self.dropout(x)
@@ -140,49 +139,4 @@ class ViT(nn.Module):
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
         x = self.to_latent(x)
-        self.cosresult = x
-        return self.mlp_head(x),self.cosresult
-
-class Dense_fenlei(nn.Module):
-    def __init__(self,num_classes, dim, dropout = 0.):
-        super().__init__()
-        # self.vit_a = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout,False)
-        # self.vit_b = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout)
-        self.fc1 = nn.Linear(dim*2, dim)
-        self.fc2 = nn.Linear(dim, dim)
-        self.fc3 = nn.Linear(dim, num_classes)
-        self.dropout = nn.Dropout(dropout)
-    def forward(self,input_a,input_b):
-        # x_a_out,x_a = self.vit_a(input_a)
-        # self.place = x_a_out
-        # self.place_feat = x_a
-        # x_b_out,x_b = self.vit_b(input_b)
-        # self.tea = x_b_out
-        # self.tea_feat = x_b
-        x = torch.cat((input_a,input_b),dim = 1)
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = F.relu(self.fc2(x))
-        x = self.dropout(x)
-        return self.fc3(x)
-
-class FocalLoss(nn.Module):
-    def __init__(self, alpha=1, gamma=2, logits=False, reduce=True):
-        super(FocalLoss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-        self.logits = logits
-        self.reduce = reduce
-
-    def forward(self, inputs, targets):
-        if self.logits:
-            BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduce=False)
-        else:
-            BCE_loss = F.binary_cross_entropy(inputs, targets, reduce=False)
-        pt = torch.exp(-BCE_loss)
-        F_loss = self.alpha * (1-pt)**self.gamma * BCE_loss
-
-        if self.reduce:
-            return torch.mean(F_loss)
-        else:
-            return F_loss
+        return self.mlp_head(x)
