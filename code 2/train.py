@@ -92,7 +92,6 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
     with torch.no_grad():
         for idx,(feature,target) in enumerate(test_loader):
             feature = feature.cuda()
-            pdb.set_trace()
             target = target.view(-1).cuda()
             output = model(feature)
             output = output.squeeze(dim=-1)
@@ -150,8 +149,15 @@ def train_mult(cfg, model1,model2,model3,train_loader, optimizer1, optimizer2,op
             out_tea, emb_tea = model3(feat_tea)
             out_place = out_place.squeeze(dim=-1)
             out_tea = out_tea.squeeze(dim=-1)
+<<<<<<< HEAD
             loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
             loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
+=======
+            #loss_place = 0.5*criterion1(out_place,target.float()) + 0.5*criterion2(emb_place,target.float())
+            #loss_place = criterion1(out_place,target.float())
+            loss_place = criterion2(emb_place,target.float())
+            loss_tea = 0.5*criterion1(out_tea,target.float()) + 0.5*criterion2(emb_tea,target.float())
+>>>>>>> ali_fusion
             loss_place.backward(retain_graph=True)
             loss_tea.backward()
             optimizer2.step()
@@ -189,8 +195,15 @@ def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,cri
             out_place = out_place.squeeze(dim=-1)
             out_tea = out_tea.squeeze(dim=-1)
             out=out.view(-1,2)
+<<<<<<< HEAD
             loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
             loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
+=======
+            #loss_place = 0.5*criterion1(out_place,target.float()) + 0.5*criterion2(emb_place,target.float())
+            #loss_place = criterion1(out_place,target.float())
+            loss_place = criterion2(emb_place,target.float())
+            loss_tea = 0.5*criterion1(out_tea,target.float()) + 0.5*criterion2(emb_tea,target.float())
+>>>>>>> ali_fusion
             #loss=criterion1(out,target.float()) + loss_place + loss_tea
             loss = criterion3(out,target)
             test_loss += loss.item()
@@ -212,4 +225,130 @@ def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,cri
         ap = get_ap(gts_raw, prob_raw)
         ap_tea = get_ap(gts_raw, prob_raw_tea)
         ap_place = get_ap(gts_raw, prob_raw_place)
+<<<<<<< HEAD
         return test_loss,test_loss_place,test_loss_tea,ap,ap_place,ap_tea,correct1
+=======
+        return test_loss,test_loss_place,test_loss_tea,ap,ap_place,ap_tea,correct1
+        
+#?????????
+def train_two(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state):
+    if state == 1:
+        train_loss=0
+        model1.train()
+        model2.train()
+        model_dense.train()
+        #?????????
+        for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
+            feat_place = feat_place.cuda()
+            feat_tea = feat_tea.cuda()
+            target = target.view(-1).cuda()
+            optimizer1.zero_grad()
+            optimizer_dense.zero_grad()
+            output = model1(feat_tea)
+            output = model_dense(output)
+            output = output.squeeze(dim=-1)
+            #output=output.view(-1,2)
+            #loss = criterion2(embedding,target.float())
+            loss=criterion(output,target)
+            loss.backward()
+            optimizer1.step()
+            optimizer_dense.step()
+            train_loss+=loss.item()
+            print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+                    epoch, int(idx * len(feat_tea)), len(train_loader.dataset), loss.item()))
+    if state == 2:
+        train_loss=0
+        model1.train()
+        model2.train()
+        for k,v in model2.named_parameters():
+          v.requires_grad=False#????
+        model_dense.train()
+        for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
+            feat_place = feat_place.cuda()
+            feat_tea = feat_tea.cuda()
+            target = target.view(-1).cuda()
+            optimizer1.zero_grad()
+            optimizer_dense.zero_grad()
+            output2 = model2(feat_tea)
+            output1 = model1(feat_place)
+            output = torch.cat((output1,output2),1)
+            output = model_dense(output)
+            output = output.squeeze(dim=-1)
+            loss=criterion(output,target)
+            loss.backward()
+            optimizer1.step()
+            optimizer_dense.step()
+            train_loss+=loss.item()
+            print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+                    epoch, int(idx * len(feat_tea)), len(train_loader.dataset), loss.item()))
+
+def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='test'):
+    model1.eval()
+    model2.eval()
+    model_dense.eval()
+    test_loss=0
+    prob_raw, gts_raw = [], []
+    correct1, correct0 = 0, 0
+    gt1, gt0, all_gt = 0, 0, 0
+    if state ==1:
+        with torch.no_grad():
+            for idx,(feat_place,feat_tea,target) in enumerate(test_loader):
+                feat_place = feat_place.cuda()
+                feat_tea = feat_tea.cuda()
+                target = target.view(-1).cuda()
+                output = model1(feat_tea)
+                output = model_dense(output)
+                output = output.squeeze(dim=-1)
+                #embedding = model.cosresult
+                #loss = criterion2(embedding,target.float())
+
+                #cross entpy ?target???,????float
+                loss = criterion(output,target)
+                test_loss += loss.item()
+                #??????????
+                output = F.softmax(output, dim=1)
+
+                # prob = torch.sigmoid(output)
+
+                # ????1????
+                prob = output[:, 1]
+                gt = target.cpu().detach().numpy()
+                prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+                idx1 = np.where(gt == 1)[0]
+                correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
+                gts_raw.append(target.cpu().numpy())
+                prob_raw.append(prob.cpu().numpy())
+            ap = get_ap(gts_raw, prob_raw)
+            return test_loss,ap,correct1
+    if state ==2:
+        with torch.no_grad():
+            for idx,(feat_place,feat_tea,target) in enumerate(test_loader):
+                feat_place = feat_place.cuda()
+                feat_tea = feat_tea.cuda()
+                target = target.view(-1).cuda()
+                output1 = model1(feat_place)
+                output2 = model2(feat_tea)
+                output = torch.cat((output1,output2),1)
+                output = model_dense(output)
+                output = output.squeeze(dim=-1)
+                #embedding = model.cosresult
+                #loss = criterion2(embedding,target.float())
+
+                #cross entpy ?target???,????float
+                loss = criterion(output,target)
+                test_loss += loss.item()
+                output = F.softmax(output, dim=1)
+
+                # prob = torch.sigmoid(output)
+
+                # ????1????
+                prob = output[:, 1]
+                gt = target.cpu().detach().numpy()
+                prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+                idx1 = np.where(gt == 1)[0]
+                correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
+                gts_raw.append(target.cpu().numpy())
+                prob_raw.append(prob.cpu().numpy())
+            ap = get_ap(gts_raw, prob_raw)
+            return test_loss,ap,correct1
+>>>>>>> ali_fusion
