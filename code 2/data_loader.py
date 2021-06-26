@@ -56,7 +56,7 @@ class MutiDateset(Dataset):
         place_feats=torch.from_numpy(feat_1).float()
         tea_feats=torch.from_numpy(feat_2).float()
         labels = np.array(int(label))
-        return tea_feats,place_feats,labels
+        return place_feats,tea_feats,labels
 ##npy文件路径 标签
 class actionDataset(Dataset):
     def __init__(self,feature_file):

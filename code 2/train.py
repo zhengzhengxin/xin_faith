@@ -35,7 +35,54 @@ def train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,crit
     #学习率的一个优化，不一定需要使用
     scheduler.step()
         
-        
+def train_action(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1):
+    train_loss=0
+    model.train()
+    for idx,(feature,length,target) in enumerate(train_loader):
+        feature = feature.cuda()
+        target = target.view(-1).cuda()
+        optimizer.zero_grad()
+        output = model(feature,length)
+        #???1?????
+        output = output.squeeze(dim=-1)
+        #embedding = model.cosresult
+        #output=output.view(-1,2)
+        #loss = criterion2(embedding,target.float())
+        loss=criterion1(output,target)
+        loss.backward()
+        optimizer.step()
+        train_loss+=loss.item()
+        print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+                epoch, int(idx * len(feature)), len(train_loader.dataset), loss.item()))
+    #学习率的一个优化，不一定需要使用
+    scheduler.step()
+def test_action(cfg, model, test_loader, criterion1,mode='test'):
+    model.eval()
+    test_loss=0
+    prob_raw, gts_raw = [], []
+    correct1, correct0 = 0, 0
+    gt1, gt0, all_gt = 0, 0, 0
+    with torch.no_grad():
+        for idx,(feature,length,target) in enumerate(test_loader):
+            feature = feature.cuda()
+            target = target.view(-1).cuda()
+            output = model(feature,length)
+            output = output.squeeze(dim=-1)
+            #embedding = model.cosresult
+            #loss = criterion2(embedding,target.float())
+            loss=criterion1(output,target)
+            test_loss += loss.item()
+            output = F.softmax(output, dim=1)
+            prob = output[:, 1]
+            #prob = torch.sigmoid(output)
+            gt = target.cpu().detach().numpy()
+            prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+            idx1 = np.where(gt == 1)[0]
+            correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
+            gts_raw.append(target.cpu().numpy())
+            prob_raw.append(prob.cpu().numpy())
+        ap = get_ap(gts_raw, prob_raw)
+        return test_loss,ap,correct1     
 def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
     model.eval()
     test_loss=0
@@ -45,7 +92,6 @@ def test(cfg, model, test_loader, criterion1, criterion2,mode='test'):
     with torch.no_grad():
         for idx,(feature,target) in enumerate(test_loader):
             feature = feature.cuda()
-            pdb.set_trace()
             target = target.view(-1).cuda()
             output = model(feature)
             output = output.squeeze(dim=-1)
@@ -86,52 +132,51 @@ class FocalLoss(nn.Module):
         else:
             return F_loss
 
-def train_mult(cfg, model,train_loader, optimizer1,optimizer2, scheduler, epoch, criterion1,criterion2,criterion3):
+def train_mult(cfg, model1,model2,model3,train_loader, optimizer1, optimizer2,optimizer3,scheduler, epoch, criterion1,criterion2,criterion3):
     train_loss=0
-    model.train()
-    if epoch < 5:
-        for name, value in model.named_parameters():
-            if "vit" in name:
-                value.requires_grad = False
-            if "vit" not in name:
-                value.requires_grad = True
-    if epoch >= 5:
-        for name, value in model.named_parameters():
-            if "vit" in name:
-                value.requires_grad = True
-            if "vit" not in name:
-                value.requires_grad = False
+    model1.train()
+    model2.train()
+    model3.train()
     for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
         feat_place = feat_place.cuda()
         feat_tea = feat_tea.cuda()
         target = target.view(-1).cuda()
         optimizer1.zero_grad()
         optimizer2.zero_grad()
-        out_place, out_tea, emb_place, emb_tea, out = model(feat_place,feat_tea)
-        out_place = out_place.squeeze(dim=-1)
-        out_tea = out_tea.squeeze(dim=-1)
-        out=out.view(-1,2)
-        if epoch >= 5: 
-            loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-            loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
-            loss = loss_place + loss_tea
+        optimizer3.zero_grad()
+        if epoch % 2 == 0:
+            out_place, emb_place= model2(feat_place)
+            out_tea, emb_tea = model3(feat_tea)
+            out_place = out_place.squeeze(dim=-1)
+            out_tea = out_tea.squeeze(dim=-1)
+            #loss_place = 0.5*criterion1(out_place,target.float()) + 0.5*criterion2(emb_place,target.float())
+            #loss_place = criterion1(out_place,target.float())
+            loss_place = criterion2(emb_place,target.float())
+            loss_tea = 0.5*criterion1(out_tea,target.float()) + 0.5*criterion2(emb_tea,target.float())
+            loss_place.backward(retain_graph=True)
+            loss_tea.backward()
+            optimizer2.step()
+            optimizer3.step()
+        else:
+            _, emb_place= model2(feat_place)
+            _, emb_tea = model3(feat_tea)
+            out = model1(emb_place,emb_tea)
+            out=out.view(-1,2)
+            loss = criterion3(out,target)
             loss.backward()
             optimizer1.step()
-            train_loss+=loss.item()
-        if epoch < 5:
-            loss=criterion3(out,target)
-            loss.backward()
-            optimizer2.step()
-            train_loss+=loss.item()
-            print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
-                    epoch, int(idx * len(feat_place)), len(train_loader.dataset), loss.item()))
+        # train_loss+=loss.item()
+        # print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+        #         epoch, int(idx * len(feat_place)), len(train_loader.dataset), loss.item()))
     #学习率的一个优化，不一定需要使用
-    scheduler.step()
+    #scheduler.step()
 
-def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='test'):
-    model.eval()
-    test_loss, test_place_loss, test_tea_loss=0, 0, 0
-    prob_raw, gts_raw, prob_tea_raw, prob_place_raw = [], [], [], []
+def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,criterion3,mode='test'):
+    model1.eval()
+    model2.eval()
+    model3.eval()
+    test_loss,test_loss_place,test_loss_tea=0, 0, 0
+    prob_raw, gts_raw, prob_raw_place, prob_raw_tea = [], [], [], []
     correct1, correct0 = 0, 0
     gt1, gt0, all_gt = 0, 0, 0
     with torch.no_grad():
@@ -139,20 +184,25 @@ def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='t
             feat_place = feat_place.cuda()
             feat_tea = feat_tea.cuda()
             target = target.view(-1).cuda()
-            out_place, out_tea, emb_place, emb_tea, out = model(feat_place,feat_tea)
+            out_place, emb_place= model2(feat_place)
+            out_tea, emb_tea = model3(feat_tea)
+            out = model1(emb_place,emb_tea)
             out_place = out_place.squeeze(dim=-1)
             out_tea = out_tea.squeeze(dim=-1)
             out=out.view(-1,2)
-            loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-            loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
+            #loss_place = 0.5*criterion1(out_place,target.float()) + 0.5*criterion2(emb_place,target.float())
+            #loss_place = criterion1(out_place,target.float())
+            loss_place = criterion2(emb_place,target.float())
+            loss_tea = 0.5*criterion1(out_tea,target.float()) + 0.5*criterion2(emb_tea,target.float())
+            #loss=criterion1(out,target.float()) + loss_place + loss_tea
             loss = criterion3(out,target)
             test_loss += loss.item()
-            test_place_loss += loss_place.item()
-            test_tea_loss += loss_tea.item()
+            test_loss_place += loss_place.item()
+            test_loss_tea += loss_tea.item()
             # count ap
             out = F.softmax(out, dim=1)
-            prob_place = torch.sigmoid(out_tea)
-            prob_tea = torch.sigmoid(out_place)
+            prob_tea = torch.sigmoid(out_tea)
+            prob_place = torch.sigmoid(out_place)
             prob = out[:, 1]
             gt = target.cpu().detach().numpy()
             prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -160,20 +210,21 @@ def test_mult(cfg, model, test_loader, criterion1, criterion2,criterion3,mode='t
             correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
             gts_raw.append(target.cpu().numpy())
             prob_raw.append(prob.cpu().numpy())
-            prob_tea_raw.append(prob_tea.cpu().numpy())
-            prob_place_raw.append(prob_place.cpu().numpy())
+            prob_raw_tea.append(prob_tea.cpu().numpy())
+            prob_raw_place.append(prob_place.cpu().numpy())
         ap = get_ap(gts_raw, prob_raw)
-        ap_tea = get_ap(gts_raw, prob_tea_raw)
-        ap_place = get_ap(gts_raw, prob_place_raw)
-        return test_loss,test_tea_loss,test_place_loss,ap,correct1,ap_tea,ap_place
-
-#阿里论文两特征融合
+        ap_tea = get_ap(gts_raw, prob_raw_tea)
+        ap_place = get_ap(gts_raw, prob_raw_place)
+        return test_loss,test_loss_place,test_loss_tea,ap,ap_place,ap_tea,correct1
+        
+#?????????
 def train_two(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state):
     if state == 1:
         train_loss=0
         model1.train()
+        model2.train()
         model_dense.train()
-        #注意数据输入的顺序
+        #?????????
         for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
             feat_place = feat_place.cuda()
             feat_tea = feat_tea.cuda()
@@ -195,6 +246,9 @@ def train_two(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer
     if state == 2:
         train_loss=0
         model1.train()
+        model2.train()
+        for k,v in model2.named_parameters():
+          v.requires_grad=False#????
         model_dense.train()
         for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
             feat_place = feat_place.cuda()
@@ -235,15 +289,15 @@ def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='
                 #embedding = model.cosresult
                 #loss = criterion2(embedding,target.float())
 
-                #cross entpy 的target是分类，不用转成float
+                #cross entpy ?target???,????float
                 loss = criterion(output,target)
                 test_loss += loss.item()
-                #这个维度不知道对不对
+                #??????????
                 output = F.softmax(output, dim=1)
 
                 # prob = torch.sigmoid(output)
 
-                # 应该是为1的概率吧
+                # ????1????
                 prob = output[:, 1]
                 gt = target.cpu().detach().numpy()
                 prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -267,14 +321,14 @@ def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='
                 #embedding = model.cosresult
                 #loss = criterion2(embedding,target.float())
 
-                #cross entpy 的target是分类，不用转成float
+                #cross entpy ?target???,????float
                 loss = criterion(output,target)
                 test_loss += loss.item()
                 output = F.softmax(output, dim=1)
 
                 # prob = torch.sigmoid(output)
 
-                # 应该是为1的概率吧
+                # ????1????
                 prob = output[:, 1]
                 gt = target.cpu().detach().numpy()
                 prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
