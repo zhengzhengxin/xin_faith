@@ -37,7 +37,6 @@ class Action_class(nn.Module):
         self.lstm=nn.LSTM(input_size=self.input_dim,
                           hidden_size=self.lstm_hidden,
                           batch_first=True)
-<<<<<<< HEAD
         self.hidden2tag = nn.Linear(4096, 512)
         self.fc = nn.Linear(512, 2)
                           
@@ -48,15 +47,6 @@ class Action_class(nn.Module):
         self.h = h1[-1]
         tag_score = self.hidden2tag(F.relu(h1[-1]))
         tag_score = self.fc(F.relu(tag_score))
-=======
-        self.hidden2tag = nn.Linear(2048, 1)
-                          
-    def forward(self,x,x_len):
-        x = pack_padded_sequence(x, x_len, batch_first=True)
-        out,(_,_) = self.lstm(x)
-        #lstm_out, lens = pad_packed_sequence(out, batch_first=True)
-        tag_score = self.hidden2tag(lstm_out[:,-1,:])
->>>>>>> 1aa0a8456030e88ffb26c275af9a4fa6aae6e332
         return tag_score
         
 class fusion_feat(nn.Module):

@@ -120,10 +120,6 @@ def main_action():
     loss_path=cfg.store+"_loss.png"
     plt.savefig(loss_path)
 
-<<<<<<< HEAD
-if __name__ == '__main__':
-    main_action()
-=======
 def main_fusion():
     muti_train_file = cfg.muti_train_file
     muti_test_file = cfg.muti_test_file
@@ -202,4 +198,3 @@ def main_fusion():
     
 if __name__ == '__main__':
     main_fusion()
->>>>>>> ali_fusion

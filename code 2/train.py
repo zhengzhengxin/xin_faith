@@ -149,15 +149,11 @@ def train_mult(cfg, model1,model2,model3,train_loader, optimizer1, optimizer2,op
             out_tea, emb_tea = model3(feat_tea)
             out_place = out_place.squeeze(dim=-1)
             out_tea = out_tea.squeeze(dim=-1)
-<<<<<<< HEAD
-            loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-            loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
-=======
+
             #loss_place = 0.5*criterion1(out_place,target.float()) + 0.5*criterion2(emb_place,target.float())
             #loss_place = criterion1(out_place,target.float())
             loss_place = criterion2(emb_place,target.float())
             loss_tea = 0.5*criterion1(out_tea,target.float()) + 0.5*criterion2(emb_tea,target.float())
->>>>>>> ali_fusion
             loss_place.backward(retain_graph=True)
             loss_tea.backward()
             optimizer2.step()
@@ -195,15 +191,11 @@ def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,cri
             out_place = out_place.squeeze(dim=-1)
             out_tea = out_tea.squeeze(dim=-1)
             out=out.view(-1,2)
-<<<<<<< HEAD
-            loss_place = 0.2*criterion1(out_place,target.float()) + 0.8*criterion2(emb_place,target.float())
-            loss_tea = 0.9*criterion1(out_tea,target.float()) + 0.1*criterion2(emb_tea,target.float())
-=======
+
             #loss_place = 0.5*criterion1(out_place,target.float()) + 0.5*criterion2(emb_place,target.float())
             #loss_place = criterion1(out_place,target.float())
             loss_place = criterion2(emb_place,target.float())
             loss_tea = 0.5*criterion1(out_tea,target.float()) + 0.5*criterion2(emb_tea,target.float())
->>>>>>> ali_fusion
             #loss=criterion1(out,target.float()) + loss_place + loss_tea
             loss = criterion3(out,target)
             test_loss += loss.item()
@@ -225,9 +217,6 @@ def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,cri
         ap = get_ap(gts_raw, prob_raw)
         ap_tea = get_ap(gts_raw, prob_raw_tea)
         ap_place = get_ap(gts_raw, prob_raw_place)
-<<<<<<< HEAD
-        return test_loss,test_loss_place,test_loss_tea,ap,ap_place,ap_tea,correct1
-=======
         return test_loss,test_loss_place,test_loss_tea,ap,ap_place,ap_tea,correct1
         
 #?????????
@@ -351,4 +340,3 @@ def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='
                 prob_raw.append(prob.cpu().numpy())
             ap = get_ap(gts_raw, prob_raw)
             return test_loss,ap,correct1
->>>>>>> ali_fusion
