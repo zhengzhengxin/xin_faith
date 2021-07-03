@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pdb
-from vit_pytorch.vit_place import *
+from vit_place import *
 from torch.nn.utils.rnn import pad_sequence,pack_padded_sequence, pad_packed_sequence
 class Feature_class_Lstm(nn.Module):
     def __init__(self,cfg):
@@ -37,17 +37,18 @@ class Action_class(nn.Module):
         self.lstm=nn.LSTM(input_size=self.input_dim,
                           hidden_size=self.lstm_hidden,
                           batch_first=True)
-        self.hidden2tag = nn.Linear(4096, 512)
-        self.fc = nn.Linear(512, 2)
+        self.hidden2tag = nn.Linear(4096, 2048)
+        self.fc = nn.Linear(2048, 2)
                           
     def forward(self,x,x_len):
         x = pack_padded_sequence(x, x_len, batch_first=True)
         out,(h1,_) = self.lstm(x)
         #lstm_out, lens = pad_packed_sequence(out, batch_first=True)
         self.h = h1[-1]
-        tag_score = self.hidden2tag(F.relu(h1[-1]))
-        tag_score = self.fc(F.relu(tag_score))
-        return tag_score
+        tag = self.hidden2tag(F.relu(h1[-1]))
+        self.feat = tag
+        tag_score = self.fc(F.relu(tag))
+        return tag_score,tag
         
 class fusion_feat(nn.Module):
     def __init__(self, *, cfg,feature_seq,dim, depth, heads, mlp_dim, pool = 'cls', dim_head = 64, dropout = 0., emb_dropout = 0.):
@@ -90,16 +91,19 @@ class fusion_feat(nn.Module):
 
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
-        x = self.to_latent(x)
-        return self.norm(x)
+        #x = self.to_latent(x)
+        #return self.norm(x)
+        return x
 
 class fusion(nn.Module):
-    def __init__(self, *, cfg,dim,num_classes):
+    def __init__(self, *,dim,num_classes):
         super(fusion,self).__init__()
-        self.fc1 = nn.Linear(dim, 4096)
-        self.fc2 = nn.Linear(4096, num_classes)
+        self.norm = nn.LayerNorm(dim)
+        self.fc1 = nn.Linear(dim, 2048)
+        self.fc2 = nn.Linear(2048, num_classes)
     def forward(self,x):
         b,n = x.shape
+        x = self.norm(x)
         out = F.relu(self.fc1(x))
         out = self.fc2(out)
         #这里的x没有经过softmax

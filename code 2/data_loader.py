@@ -57,6 +57,40 @@ class MutiDateset(Dataset):
         tea_feats=torch.from_numpy(feat_2).float()
         labels = np.array(int(label))
         return place_feats,tea_feats,labels
+class I3d_tea_Dateset(Dataset):
+    def __init__(self,feature_file):
+        with open(feature_file) as f:
+            self.feature_file_single = [l.strip().split() for l in f.readlines()]
+            self.samples=len(self.feature_file_single)
+
+    def __len__(self):
+        return self.samples
+        #文件名是 特征路径 标签
+    def __getitem__(self,index):
+        feature_path_1=self.feature_file_single[index][0]
+        feature_path_2=self.feature_file_single[index][1]
+        label=self.feature_file_single[index][2]
+        feat_1=np.load(feature_path_1)
+        feat_2=np.load(feature_path_2)
+        i3d_feats=torch.from_numpy(feat_1).float()
+        tea_feats=torch.from_numpy(feat_2).float()
+        labels = int(label)
+        length = np.array(len(feat_1))
+        return i3d_feats,tea_feats,labels,length
+
+def collate_fn1(train_data):
+    train_data.sort(key=lambda x: x[3], reverse=True)
+    llds,teas,labels,_ = zip(*train_data)
+    data_length = [len(data) for data in llds]
+    data_length = torch.tensor(data_length)
+    label = [data for data in labels]
+    label = torch.tensor(label)
+    train_data = pad_sequence(llds, batch_first=True, padding_value=0)
+    pdb.set_trace()
+    tea = [data for data in teas]
+    tea = torch.tensor(tea)
+    return train_data,tea,data_length,label
+
 ##npy文件路径 标签
 class actionDataset(Dataset):
     def __init__(self,feature_file):
