@@ -8,7 +8,6 @@ import pdb
 class Feature_class(nn.Module):
     def __init__(self,cfg):
         super(Feature_class, self).__init__()
-        #cfg里面得设置输入维度，lstm的参数
         self.seq_len=cfg.seq_len
         self.lstm_hidden=cfg.lstm_hidden
         self.num_layer=cfg.num_layer
@@ -108,8 +107,7 @@ class ViT(nn.Module):
         self.do_bn = batch_normalization
         if self.do_bn: self.bn_input = nn.BatchNorm1d(feature_seq, momentum=0.5) 
         self.pos_embedding = nn.Parameter(torch.randn(1, feature_seq + 1, dim))
-        #编码token的函数
-        self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
+        #self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
         self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
@@ -123,7 +121,6 @@ class ViT(nn.Module):
         )
 
     def forward(self, x):
-        #不需要embe
         #x = self.to_patch_embedding(img)
         #x=self.lstm(x)
         if self.do_bn:  x = self.bn_input(x)
@@ -132,6 +129,7 @@ class ViT(nn.Module):
         #cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
         cls_tokens = self.lstm(x).unsqueeze(1)
         x = torch.cat((cls_tokens, x), dim=1)
+        
         x += self.pos_embedding[:, :(n + 1)]
         x = self.dropout(x)
 
@@ -165,6 +163,37 @@ class Dense_fenlei(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.dropout(x)
         return self.fc3(x)
+
+class Dense_conv(nn.Module):
+    def __init__(self,num_classes, dim, dropout = 0.):
+        super().__init__()
+        # self.vit_a = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout,False)
+        # self.vit_b = ViT(cfg,feature_seq,1, dim, depth, heads, mlp_dim, dropout)
+        self.conv2d = nn.Conv2d(1,512,kernel_size=(2,1))
+        self.pool = nn.MaxPool3d(kernel_size=(512,1,1))
+        self.fc2 = nn.Linear(dim, dim//2)
+        self.fc3 = nn.Linear(dim//2, num_classes)
+        self.dropout = nn.Dropout(dropout)
+    def forward(self,input_a,input_b):
+        # x_a_out,x_a = self.vit_a(input_a)
+        # self.place = x_a_out
+        # self.place_feat = x_a
+        # x_b_out,x_b = self.vit_b(input_b)
+        # self.tea = x_b_out
+        # self.tea_feat = x_b
+        input_a = input_a.unsqueeze(1)
+        input_b = input_b.unsqueeze(1)
+        
+        x = torch.cat((input_a,input_b),dim = 1)
+        x = x.unsqueeze(1)
+        x = F.relu(self.conv2d(x))
+        x = self.pool(x)
+        x = x.squeeze()
+        x = self.dropout(x)
+        x = F.relu(self.fc2(x))
+        x = self.dropout(x)
+        return self.fc3(x)
+        
 
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1, gamma=2, logits=False, reduce=True):

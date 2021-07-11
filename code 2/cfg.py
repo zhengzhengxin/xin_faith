@@ -4,9 +4,9 @@ num_layer=1
 input_dim=2048
 lstm_dropout=0.5
 bidirectional=True
-epoch = 20
+epoch = 2000
 optim = dict(name='SGD',setting=dict(lr=5e-3, weight_decay=5e-3))
-optim1 = dict(name='SGD',setting=dict(lr=5e-3, weight_decay=5e-3))
+optim1 = dict(name='SGD',setting=dict(lr=1e-2, weight_decay=5e-3))
 optim2 = dict(name='SGD',setting=dict(lr=5e-3, weight_decay=5e-3))
 batch_size=512
 
@@ -15,7 +15,7 @@ stepper = dict(name='MultiStepLR',setting=dict(milestones=[],gamma=0.5))
 loss = dict(weight=[1.0, 1.0])
 
 
-store='./ali/test'
+store='./ali/i3d12_tea53'
 
 
 feature_train_file='/home/zhenzhengxin/feature_single_class/label/place_feature_train.txt'

@@ -86,9 +86,7 @@ def collate_fn1(train_data):
     label = [data for data in labels]
     label = torch.tensor(label)
     train_data = pad_sequence(llds, batch_first=True, padding_value=0)
-    pdb.set_trace()
-    tea = [data for data in teas]
-    tea = torch.tensor(tea)
+    tea = torch.tensor([item.cpu().detach().numpy() for item in teas]).cuda()
     return train_data,tea,data_length,label
 
 ##npy文件路径 标签

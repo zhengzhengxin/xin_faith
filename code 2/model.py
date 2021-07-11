@@ -7,8 +7,6 @@ from torch.nn.utils.rnn import pad_sequence,pack_padded_sequence, pad_packed_seq
 class Feature_class_Lstm(nn.Module):
     def __init__(self,cfg):
         super(Feature_class_Lstm, self).__init__()
-        #cfg里面得设置输入维度，lstm的参数
-        self.seq_len=cfg.seq_len
         self.lstm_hidden=cfg.lstm_hidden
         self.num_layer=cfg.num_layer
         self.input_dim=cfg.input_dim
@@ -65,8 +63,7 @@ class fusion_feat(nn.Module):
 
         
         self.pos_embedding = nn.Parameter(torch.randn(1, feature_seq + 1, dim))
-        #编码token的函数
-        self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
+        #self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
         self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
@@ -77,12 +74,9 @@ class fusion_feat(nn.Module):
         self.lstm=Feature_class(cfg)
 
     def forward(self, x):
-        #不需要embe
         #x = self.to_patch_embedding(img)
-        x=self.lstm(x)
+        cls_tokens=self.lstm(x).unsqueeze(1)
         b, n, _ = x.shape
-
-        cls_tokens = repeat(self.cls_token, '() n d -> b n d', b = b)
         x = torch.cat((cls_tokens, x), dim=1)
         x += self.pos_embedding[:, :(n + 1)]
         x = self.dropout(x)
@@ -106,6 +100,5 @@ class fusion(nn.Module):
         x = self.norm(x)
         out = F.relu(self.fc1(x))
         out = self.fc2(out)
-        #这里的x没有经过softmax
         return x
 

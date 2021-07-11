@@ -224,9 +224,10 @@ def main_i3d_tea():
     total_epoch=list()
     total_ap=list()
     total_acc=list()
-    max_ap=0
+    max_ap = 0
+    max_ap2 = 0
     for epoch in range(0,cfg.epoch):
-        if epoch<10:
+        if epoch<1200:
             state = 1;
             train_i3d_tea(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state)
             #???model2???
@@ -238,7 +239,8 @@ def main_i3d_tea():
             print('Test Epoch: {} \tloss: {:.6f}\tap: {:.6f}\t acc: {:.6f}'.format(epoch, loss,ap,acc))
             if ap>max_ap:
                 best_model1=model1
-        if epoch>10:
+                max_ap = ap
+        if epoch>1200:
             state = 2;
             model1 = best_model1
             model_dense = fusion(dim = 4096 ,num_classes=2).cuda()
@@ -251,9 +253,10 @@ def main_i3d_tea():
             total_epoch.append(epoch)
             total_acc.append(acc)
             print('Test Epoch: {} \tloss: {:.6f}\tap: {:.6f}\t acc: {:.6f}'.format(epoch, loss,ap,acc))
-            if ap>max_ap:
-                best_model2=model2
+            if ap>max_ap2:
+                best_model2 = model2
                 best_dense = model_dense
+                max_ap2 = ap
     save_path1=cfg.store+'model1.pth'
     save_path2=cfg.store+'model2.pth'
     save_path3=cfg.store+'model_dense.pth'

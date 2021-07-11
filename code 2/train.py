@@ -7,7 +7,6 @@ from sklearn.metrics import average_precision_score
 def get_ap(groud_truth,predict):
     gts,preds = [],[]
     for gt_raw in groud_truth:
-        #追加元素
         gts.extend(gt_raw.tolist())
     for pred_raw in predict:
         preds.extend(pred_raw.tolist())
@@ -32,8 +31,7 @@ def train(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1,crit
         train_loss+=loss.item()
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
                 epoch, int(idx * len(feature)), len(train_loader.dataset), loss.item()))
-    #学习率的一个优化，不一定需要使用
-    scheduler.step()
+    #scheduler.step()
         
 def train_action(cfg, model, train_loader, optimizer, scheduler, epoch, criterion1):
     train_loss=0
@@ -54,8 +52,7 @@ def train_action(cfg, model, train_loader, optimizer, scheduler, epoch, criterio
         train_loss+=loss.item()
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
                 epoch, int(idx * len(feature)), len(train_loader.dataset), loss.item()))
-    #学习率的一个优化，不一定需要使用
-    scheduler.step()
+    #scheduler.step()
 def test_action(cfg, model, test_loader, criterion1,mode='test'):
     model.eval()
     test_loss=0
@@ -169,8 +166,7 @@ def train_mult(cfg, model1,model2,model3,train_loader, optimizer1, optimizer2,op
         # train_loss+=loss.item()
         # print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
         #         epoch, int(idx * len(feat_place)), len(train_loader.dataset), loss.item()))
-    #学习率的一个优化，不一定需要使用
-    #scheduler.step()
+#scheduler.step()
 
 def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,criterion3,mode='test'):
     model1.eval()
@@ -219,14 +215,13 @@ def test_mult(cfg, model1, model2,model3,test_loader, criterion1, criterion2,cri
         ap_place = get_ap(gts_raw, prob_raw_place)
         return test_loss,test_loss_place,test_loss_tea,ap,ap_place,ap_tea,correct1
         
-#?????????
+
 def train_two(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state):
     if state == 1:
         train_loss=0
         model1.train()
         model2.train()
         model_dense.train()
-        #?????????
         for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
             feat_place = feat_place.cuda()
             feat_tea = feat_tea.cuda()
@@ -250,7 +245,7 @@ def train_two(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer
         model1.train()
         model2.train()
         for k,v in model2.named_parameters():
-          v.requires_grad=False#????
+          v.requires_grad=False
         model_dense.train()
         for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
             feat_place = feat_place.cuda()
@@ -291,15 +286,12 @@ def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='
                 #embedding = model.cosresult
                 #loss = criterion2(embedding,target.float())
 
-                #cross entpy ?target???,????float
                 loss = criterion(output,target)
                 test_loss += loss.item()
-                #??????????
                 output = F.softmax(output, dim=1)
 
                 # prob = torch.sigmoid(output)
 
-                # ????1????
                 prob = output[:, 1]
                 gt = target.cpu().detach().numpy()
                 prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -330,7 +322,6 @@ def test_two(cfg, model1, model2,model_dense,test_loader, criterion,state,mode='
 
                 # prob = torch.sigmoid(output)
 
-                # ????1????
                 prob = output[:, 1]
                 gt = target.cpu().detach().numpy()
                 prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -348,16 +339,13 @@ def train_i3d_tea(cfg, model1, model2,model_dense,train_loader, optimizer1,optim
         model1.train()
         model2.train()
         model_dense.train()
-        #?????????
-        pdb.set_trace()
         for idx,(feat_i3d,feat_tea,length,target) in enumerate(train_loader):
-            
             feat_i3d = feat_i3d.cuda()
             feat_tea = feat_tea.cuda()
             target = target.view(-1).cuda()
             optimizer1.zero_grad()
             optimizer_dense.zero_grad()
-            output,_ = model(feat_i3d,length)
+            output,_ = model1(feat_i3d,length)
             output = output.squeeze(dim=-1)
 
             #output = model_dense(output)
@@ -378,14 +366,14 @@ def train_i3d_tea(cfg, model1, model2,model_dense,train_loader, optimizer1,optim
         for k,v in model2.named_parameters():
           v.requires_grad=False
         model_dense.train()
-        for idx,(feat_i3d,feat_tea,target) in enumerate(train_loader):
+        for idx,(feat_i3d,feat_tea,length,target) in enumerate(train_loader):
             feat_i3d = feat_i3d.cuda()
             feat_tea = feat_tea.cuda()
             target = target.view(-1).cuda()
             optimizer1.zero_grad()
             optimizer_dense.zero_grad()
-            output2 = model2(feat_tea)
-            _, output1= model1(feat_i3d,length)
+            output1 = model1(feat_tea)
+            _, output2= model2(feat_i3d,length)
             output = torch.cat((output1,output2),1)
             output = model_dense(output)
             output = output.squeeze(dim=-1)
@@ -411,19 +399,16 @@ def test_i3d_tea(cfg, model1, model2,model_dense,test_loader, criterion,state,mo
                 feat_i3d = feat_i3d.cuda()
                 feat_tea = feat_tea.cuda()
                 target = target.view(-1).cuda()
-                output = model1(feat_i3d,length)
+                output,_ = model1(feat_i3d,length)
                 #output = model_dense(output)
                 output = output.squeeze(dim=-1)
                 #embedding = model.cosresult
                 #loss = criterion2(embedding,target.float())
 
-                #cross entpy ?target???,????float
                 loss = criterion(output,target)
                 test_loss += loss.item()
-                #??????????
-                output,_ = F.softmax(output, dim=1)
+                output = F.softmax(output, dim=1)
                 # prob = torch.sigmoid(output)
-                # ????1????
                 prob = output[:, 1]
                 gt = target.cpu().detach().numpy()
                 prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -435,26 +420,24 @@ def test_i3d_tea(cfg, model1, model2,model_dense,test_loader, criterion,state,mo
             return test_loss,ap,correct1
     if state ==2:
         with torch.no_grad():
-            for idx,(feat_i3d,feat_tea,target) in enumerate(test_loader):
+            for idx,(feat_i3d,feat_tea,length,target) in enumerate(test_loader):
                 feat_i3d = feat_i3d.cuda()
                 feat_tea = feat_tea.cuda()
                 target = target.view(-1).cuda()
-                _,output1 = model1(feat_i3d,length)
-                output2 = model2(feat_tea)
+                _,output2 = model2(feat_i3d,length)
+                output1 = model1(feat_tea)
                 output = torch.cat((output1,output2),1)
                 output = model_dense(output)
                 output = output.squeeze(dim=-1)
                 #embedding = model.cosresult
                 #loss = criterion2(embedding,target.float())
 
-                #cross entpy ?target???,????float
                 loss = criterion(output,target)
                 test_loss += loss.item()
                 output = F.softmax(output, dim=1)
 
                 # prob = torch.sigmoid(output)
 
-                # ????1????
                 prob = output[:, 1]
                 gt = target.cpu().detach().numpy()
                 prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
@@ -464,3 +447,59 @@ def test_i3d_tea(cfg, model1, model2,model_dense,test_loader, criterion,state,mo
                 prob_raw.append(prob.cpu().numpy())
             ap = get_ap(gts_raw, prob_raw)
             return test_loss,ap,correct1
+
+
+def train_mult_conv(cfg, model1,model2,model3,train_loader, optimizer1, optimizer2,optimizer3,scheduler, epoch, criterion1,criterion2):
+    train_loss=0
+    model1.train()
+    model2.train()
+    model3.train()
+    for idx,(feat_place,feat_tea,target) in enumerate(train_loader):
+        feat_place = feat_place.cuda()
+        feat_tea = feat_tea.cuda()
+        target = target.view(-1).cuda()
+        optimizer1.zero_grad()
+        optimizer2.zero_grad()
+        optimizer3.zero_grad()
+        _, emb_place= model2(feat_place)
+        _, emb_tea = model3(feat_tea)
+        out = model1(emb_place,emb_tea)
+        out= out.view(-1,2)
+        loss = criterion1(out,target)+criterion2(emb_place,target.float())+criterion2(emb_tea,target.float())
+        train_loss += loss.item()
+        loss.backward()
+        optimizer1.step()
+        optimizer2.step()
+        optimizer3.step()
+    return train_loss
+
+
+def test_mult_conv(cfg, model1, model2,model3,test_loader, criterion1, criterion2,mode='test'):
+    model1.eval()
+    model2.eval()
+    model3.eval()
+    test_loss=0
+    prob_raw, gts_raw =[], []
+    correct1, correct0 = 0, 0
+    gt1, gt0, all_gt = 0, 0, 0
+    with torch.no_grad():
+        for idx,(feat_place,feat_tea,target) in enumerate(test_loader):
+            feat_place = feat_place.cuda()
+            feat_tea = feat_tea.cuda()
+            target = target.view(-1).cuda()
+            _, emb_place= model2(feat_place)
+            _, emb_tea = model3(feat_tea)
+            out = model1(emb_place,emb_tea)
+            out=out.view(-1,2)
+            loss = criterion1(out,target)
+            test_loss += loss.item()
+            out = F.softmax(out, dim=1)
+            prob = out[:, 1]
+            gt = target.cpu().detach().numpy()
+            prediction = np.nan_to_num(prob.squeeze().cpu().detach().numpy()) > 0.5
+            idx1 = np.where(gt == 1)[0]
+            correct1 += len(np.where(gt[idx1] == prediction[idx1])[0])
+            gts_raw.append(target.cpu().numpy())
+            prob_raw.append(prob.cpu().numpy())
+        ap = get_ap(gts_raw, prob_raw)
+        return test_loss,ap,correct1
