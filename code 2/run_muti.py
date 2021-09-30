@@ -118,7 +118,7 @@ def main_conv():
     scheduler = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer1, **cfg.stepper.setting)
 
     criterion1 = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
-    
+     
     distance = CosineSimilarity()
     criterion2 = losses.TripletMarginLoss(distance = distance)
 

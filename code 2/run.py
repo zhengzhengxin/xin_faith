@@ -257,6 +257,85 @@ def main_i3d_tea():
                 best_model2 = model2
                 best_dense = model_dense
                 max_ap2 = ap
+    
+    save_path1=cfg.store+'model1.pth'
+    save_path2=cfg.store+'model2.pth'
+    save_path3=cfg.store+'model_dense.pth'
+    torch.save(best_model1.state_dict(), save_path1)
+    torch.save(best_model2.state_dict(), save_path2)
+    torch.save(best_dense.state_dict(), save_path3)
+    
+    plt.figure(figsize=(20, 20))
+    plt.plot(total_epoch,total_ap,'b^',label=u'AP')
+    plt.legend()
+    AP_path=cfg.store+"_AP.png"
+    plt.savefig(AP_path)
+    
+    plt.figure(figsize=(20, 20))
+    plt.plot(total_epoch,total_loss,'b^',label=u'loss')
+    plt.legend()
+    loss_path=cfg.store+"_loss.png"
+    plt.savefig(loss_path)
+
+def main_i3d_tea_vggish():
+    muti_train_file = cfg.i3d_tea_vggish_train_file
+    muti_test_file = cfg.i3d_tea_vggish_test_file
+    train_dataset = I3d_tea_vgg_Dateset(muti_train_file)
+    test_dataset = I3d_tea_vgg_Dateset(muti_test_file)
+
+    train_loader = DataLoader(train_dataset,batch_size=cfg.batch_size,shuffle=True,collate_fn=collate_fn2)
+    test_loader = DataLoader(test_dataset,batch_size=cfg.batch_size ,shuffle=False,collate_fn=collate_fn2)
+    model1 = Action_class(cfg).cuda()
+    model2 = fusion_feat(cfg=cfg,feature_seq=16,dim=2048,depth=8,heads=8,mlp_dim=1024,dropout = 0.5,emb_dropout = 0.5).cuda()
+    optimizer1 = optim.__dict__[cfg.optim1.name](model1.parameters(), **cfg.optim.setting)
+    optimizer2 = optim.__dict__[cfg.optim2.name](model2.parameters(), **cfg.optim.setting)
+    
+    scheduler1 = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer1, **cfg.stepper.setting)
+    
+    criterion = nn.CrossEntropyLoss(torch.Tensor(cfg.loss.weight).cuda())
+    #distance = CosineSimilarity()
+    #criterion2 = losses.TripletMarginLoss(distance = distance)
+
+    total_loss=list()
+    total_epoch=list()
+    total_ap=list()
+    total_acc=list()
+    max_ap = 0
+    max_ap2 = 0
+    for epoch in range(0,cfg.epoch):
+        if epoch<1200:
+            state = 1;
+            model_dense = fusion1(dim = 2048,num_classes=2).cuda()
+            optimizer_dense = optim.__dict__[cfg.optim.name](model_dense.parameters(), **cfg.optim.setting)
+            scheduler_dense = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer_dense, **cfg.stepper.setting)
+            loss_1 = train_i3d_tea_vgg(cfg, model1, model2,model_dense,train_loader, optimizer1,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state)
+            loss,ap,acc=test_i3d_tea_vgg(cfg, model1,model2, model_dense,test_loader,criterion,state)
+            total_loss.append(loss_1)
+            total_ap.append(ap)
+            total_epoch.append(epoch)
+            total_acc.append(acc)
+            print('Test Epoch: {} \tloss: {:.6f}\tap: {:.6f}\t acc: {:.6f}'.format(epoch, loss,ap,acc))
+            if ap>max_ap:
+                best_model1=model1
+                max_ap = ap
+        if epoch>1200:
+            state = 2;
+            model1 = best_model1
+            model_dense = fusion2(dim = 2048 ,num_classes=2).cuda()
+            optimizer_dense = optim.__dict__[cfg.optim.name](model_dense.parameters(), **cfg.optim.setting)
+            scheduler_dense = optim.lr_scheduler.__dict__[cfg.stepper.name](optimizer_dense, **cfg.stepper.setting)
+            loss_1 = train_i3d_tea_vgg(cfg, model2, model1,model_dense,train_loader, optimizer2,optimizer_dense, scheduler1,scheduler_dense, epoch, criterion,state)
+            loss,ap,acc=test_i3d_tea_vgg(cfg, model2, model1,model_dense,test_loader,criterion,state)
+            total_loss.append(loss_1)
+            total_ap.append(ap)
+            total_epoch.append(epoch)
+            total_acc.append(acc)
+            print('Test Epoch: {} \tloss: {:.6f}\tap: {:.6f}\t acc: {:.6f}'.format(epoch, loss,ap,acc))
+            if ap>max_ap2:
+                best_model2 = model2
+                best_dense = model_dense
+                max_ap2 = ap
+    print('best ap: {:.6f}\t'.format(max_ap2))
     save_path1=cfg.store+'model1.pth'
     save_path2=cfg.store+'model2.pth'
     save_path3=cfg.store+'model_dense.pth'
@@ -276,4 +355,4 @@ def main_i3d_tea():
     loss_path=cfg.store+"_loss.png"
     plt.savefig(loss_path)
 if __name__ == '__main__':
-    main_i3d_tea()
+    main_i3d_tea_vggish()

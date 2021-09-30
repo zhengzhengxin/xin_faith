@@ -102,3 +102,53 @@ class fusion(nn.Module):
         out = self.fc2(out)
         return x
 
+class fusion1(nn.Module):
+    def __init__(self, *,dim,num_classes):
+        super(fusion1,self).__init__()
+        self.norm = nn.LayerNorm(dim)
+        self.norm1 = nn.LayerNorm(512)
+        self.fc1 = nn.Linear(dim, 512)
+        self.conv2d = nn.Conv2d(1,512,kernel_size=(2,1))
+        self.pool = nn.MaxPool3d(kernel_size=(512,1,1))
+        self.fc2 = nn.Linear(512, num_classes)
+    def forward(self,x1,x2):
+        x1 = self.norm(x1)
+        x2 = x2.squeeze()
+        x2 = self.norm1(x2)
+        x1 = F.relu(self.fc1(x1))
+        x1 = x1.unsqueeze(1)
+        x2 = x2.unsqueeze(1)
+        x = torch.cat((x1,x2),dim = 1)
+        x = x.unsqueeze(1)
+        x = F.relu(self.conv2d(x))
+        x = self.pool(x)
+        x = x.squeeze()
+        out = self.fc2(x)
+        return out
+
+class fusion2(nn.Module):
+    def __init__(self, *,dim,num_classes):
+        super(fusion2,self).__init__()
+        self.norm = nn.LayerNorm(dim)
+        self.norm1 = nn.LayerNorm(512)
+        self.fc1 = nn.Linear(dim, 512)
+        self.conv2d = nn.Conv2d(1,512,kernel_size=(3,1))
+        self.pool = nn.MaxPool3d(kernel_size=(512,1,1))
+        self.fc2 = nn.Linear(512, num_classes)
+    def forward(self,x1,x2,x3):
+        x1 = self.norm(x1)
+        x2 = self.norm(x2)
+        x3 = x3.squeeze()
+        x3 = self.norm1(x3)
+        x1 = F.relu(self.fc1(x1))
+        x2 = F.relu(self.fc1(x2))
+        x1 = x1.unsqueeze(1)
+        x2 = x2.unsqueeze(1)
+        x3 = x3.unsqueeze(1)
+        x = torch.cat((x1,x2,x3),dim = 1)
+        x = x.unsqueeze(1)
+        x = F.relu(self.conv2d(x))
+        x = self.pool(x)
+        x = x.squeeze()
+        out = self.fc2(x)
+        return out
