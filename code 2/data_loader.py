@@ -154,33 +154,3 @@ def collate_fn(train_data):
     label = torch.tensor(label)
     train_data = pad_sequence(llds, batch_first=True, padding_value=0)
     return train_data, data_length,label
-
-    ##npy文件路径 标签
-class actionDataset(Dataset):
-    def __init__(self,feature_file):
-        with open(feature_file) as f:
-            self.feature_file_single = [l.strip().split() for l in f.readlines()]
-            self.samples=len(self.feature_file_single)
-    
-    def __len__(self):
-        return self.samples
-    
-    def __getitem__(self,index):
-        feature_path=self.feature_file_single[index][0]
-        label=self.feature_file_single[index][1]
-        feat=np.load(feature_path)
-        feats=torch.from_numpy(feat).float()
-        labels = int(label)
-        length = np.array(len(feats))
-        return feats,labels,length
-
-def collate_fn(train_data):
-    train_data.sort(key=lambda x: x[2], reverse=True)
-    llds,labels,_ = zip(*train_data)
-    data_length = [len(data) for data in llds]
-    data_length = torch.tensor(data_length)
-    
-    label = [data for data in labels]
-    label = torch.tensor(label)
-    train_data = pad_sequence(llds, batch_first=True, padding_value=0)
-    return train_data, data_length,label
