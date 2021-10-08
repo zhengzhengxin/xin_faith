@@ -148,6 +148,32 @@ class I3d_tea_vgg_Dateset(Dataset):
         labels = int(label)
         length = np.array(len(feat_1))
         return i3d_feats,tea_feats,vggish_feats,labels,length
+#情感多任务i3d，tea，vgg
+class I3d_tea_vgg_emo_Dateset(Dataset):
+    def __init__(self,feature_file):
+        with open(feature_file) as f:
+            self.feature_file_single = [l.strip().split() for l in f.readlines()]
+            self.samples=len(self.feature_file_single)
+
+    def __len__(self):
+        return self.samples
+        #文件名是 特征路径 标签
+    def __getitem__(self,index):
+        feature_path_1=self.feature_file_single[index][0]
+        feature_path_2=self.feature_file_single[index][1]
+        feature_path_3=self.feature_file_single[index][2]
+        vio_label=self.feature_file_single[index][3]
+        emo_label=self.feature_file_single[index][4]
+        feat_1=np.load(feature_path_1)
+        feat_2=np.load(feature_path_2)
+        feat_3=np.load(feature_path_3)
+        i3d_feats=torch.from_numpy(feat_1).float()
+        tea_feats=torch.from_numpy(feat_2).float()
+        vggish_feats=torch.from_numpy(feat_3).float()
+        vio_label = int(vio_label)
+        emo_label = int(emo_label)
+        length = np.array(len(feat_1))
+        return i3d_feats,tea_feats,vggish_feats,vio_label,emo_label,length
 
 def collate_fn2(train_data):
     train_data.sort(key=lambda x: x[4], reverse=True)
@@ -161,6 +187,19 @@ def collate_fn2(train_data):
     vgg = torch.tensor([item.cpu().detach().numpy() for item in vggs]).cuda()
     return train_data,tea,vgg,data_length,label
 
+def collate_fn3(train_data):
+    train_data.sort(key=lambda x: x[5], reverse=True)
+    llds,teas,vggs,vio_labels,emo_labels,_ = zip(*train_data)
+    data_length = [len(data) for data in llds]
+    data_length = torch.tensor(data_length)
+    vio_label = [data for data in vio_labels]
+    vio_label = torch.tensor(vio_label)
+    emo_label = [data for data in emo_labels]
+    emo_label = torch.tensor(emo_label)
+    train_data = pad_sequence(llds, batch_first=True, padding_value=0)
+    tea = torch.tensor([item.cpu().detach().numpy() for item in teas]).cuda()
+    vgg = torch.tensor([item.cpu().detach().numpy() for item in vggs]).cuda()
+    return train_data,tea,vgg,data_length,vio_label,emo_label
 ##npy文件路径 标签
 class actionDataset(Dataset):
     def __init__(self,feature_file):
